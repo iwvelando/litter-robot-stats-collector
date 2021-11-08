@@ -100,7 +100,6 @@ func WriteAll(config *config.Configuration, writeAPI influxAPI.WriteAPI, states 
 			},
 			ts)
 
-		fmt.Println(&litterRobotState)
 		writeAPI.WritePoint(p)
 	}
 
