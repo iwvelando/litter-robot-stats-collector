@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/iwvelando/litter-robot-stats-collector/config"
 	"github.com/iwvelando/litter-robot-stats-collector/influxdb"
+	log "github.com/sirupsen/logrus"
 	litterapi "github.com/tlkamp/litter-api"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,13 +24,6 @@ type CliInputs struct {
 
 func main() {
 
-	logger, err := zap.NewProduction()
-	if err != nil {
-		fmt.Println("{\"op\": \"main\", \"level\": \"fatal\", \"msg\": \"failed to initiate logger\"}")
-		panic(err)
-	}
-	defer logger.Sync()
-
 	cliInputs := CliInputs{
 		BuildVersion: BuildVersion,
 	}
@@ -46,27 +39,27 @@ func main() {
 
 	configuration, err := config.LoadConfiguration(cliInputs.Config)
 	if err != nil {
-		logger.Fatal("failed to parse configuration",
-			zap.String("op", "config.LoadConfiguration"),
-			zap.Error(err),
-		)
+		log.WithFields(log.Fields{
+			"op":    "config.LoadConfiguration",
+			"error": err,
+		}).Fatal("failed to parse configuration")
 	}
 
 	litterClient, err := litterapi.NewClient(&configuration.LitterRobot)
 	litterClientExpiry := time.Now().Add(litterClient.Expiry - 1*time.Minute)
 	if err != nil {
-		logger.Fatal("failed to authenticate to Litter Robot",
-			zap.String("op", "litter-api.NewClient"),
-			zap.Error(err),
-		)
+		log.WithFields(log.Fields{
+			"op":    "litter-api.NewClient",
+			"error": err,
+		}).Fatal("failed to authenticate to Litter Robot")
 	}
 
 	influxClient, writeAPI, err := influxdb.Connect(configuration)
 	if err != nil {
-		logger.Fatal("failed to authenticate to InfluxDB",
-			zap.String("op", "influxdb.Connect"),
-			zap.Error(err),
-		)
+		log.WithFields(log.Fields{
+			"op":    "influxdb.Connect",
+			"error": err,
+		}).Fatal("failed to authenticate to InfluxDB")
 	}
 	defer influxClient.Close()
 	defer writeAPI.Flush()
@@ -76,10 +69,10 @@ func main() {
 	// Monitor InfluxDB write errors
 	go func() {
 		for err := range errorsCh {
-			logger.Error("encountered error on writing to InfluxDB",
-				zap.String("op", "influxdb.WriteAll"),
-				zap.Error(err),
-			)
+			log.WithFields(log.Fields{
+				"op":    "influxdb.WriteAll",
+				"error": err,
+			}).Error("encountered error on writing to InfluxDB")
 		}
 	}()
 
@@ -99,10 +92,10 @@ func main() {
 			states, err := litterClient.States()
 			queryTime := time.Now()
 			if err != nil {
-				logger.Fatal("failed to query Litter Robot states",
-					zap.String("op", "litter-api.States"),
-					zap.Error(err),
-				)
+				log.WithFields(log.Fields{
+					"op":    "litter-api.States",
+					"error": err,
+				}).Fatal("failed to query Litter Robot states")
 			} else {
 				influxdb.WriteAll(configuration, writeAPI, states, queryTime)
 			}
@@ -115,7 +108,9 @@ func main() {
 	}()
 
 	sig := <-cancelCh
-	logger.Info(fmt.Sprintf("caught signal %v, flushing data to InfluxDB", sig))
+	log.WithFields(log.Fields{
+		"op": "main",
+	}).Info(fmt.Sprintf("caught signal %v, flushing data to InfluxDB", sig))
 	writeAPI.Flush()
 
 }
