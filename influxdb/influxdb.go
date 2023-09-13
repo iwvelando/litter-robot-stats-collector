@@ -6,7 +6,7 @@ import (
 	influx "github.com/influxdata/influxdb-client-go/v2"
 	influxAPI "github.com/influxdata/influxdb-client-go/v2/api"
 	"github.com/iwvelando/litter-robot-stats-collector/config"
-	litterapi "github.com/tlkamp/litter-api"
+	lr "github.com/tlkamp/litter-api/v2/pkg/client"
 	"math"
 	"time"
 )
@@ -72,10 +72,10 @@ func Connect(config *config.Configuration) (influx.Client, influxAPI.WriteAPI, e
 	return client, writeAPI, nil
 }
 
-func WriteAll(config *config.Configuration, writeAPI influxAPI.WriteAPI, states []litterapi.State, ts time.Time) error {
+func WriteAll(config *config.Configuration, writeAPI influxAPI.WriteAPI, robots []lr.Robot, ts time.Time) error {
 
-	for _, state := range states {
-		litterRobotState := CleanState(state)
+	for _, robot := range robots {
+		litterRobotState := CleanState(robot)
 		p := influx.NewPoint(
 			config.InfluxDB.MeasurementPrefix+"litter_robot",
 			map[string]string{
@@ -106,26 +106,26 @@ func WriteAll(config *config.Configuration, writeAPI influxAPI.WriteAPI, states 
 	return nil
 }
 
-func CleanState(s litterapi.State) (state LitterRobotState) {
+func CleanState(r lr.Robot) (robot LitterRobotState) {
 
-	state.CleanCycleWaitTimeMinutes = fToI(s.CleanCycleWaitTimeMinutes)
-	state.CyclesAfterDrawerFull = fToI(s.CyclesAfterDrawerFull)
-	state.CycleCapacity = fToI(s.CycleCapacity)
-	state.CycleCount = fToI(s.CycleCount)
-	state.CyclesUntilFull = fToI(s.CyclesUntilFull)
-	state.DidNotifyOffline = s.DidNotifyOffline
-	state.DFICycleCount = fToI(s.DFICycleCount)
-	state.DFITriggered = s.DFITriggered
-	state.LitterRobotID = s.LitterRobotID
-	state.LitterRobotSerial = s.LitterRobotSerial
-	state.Name = s.Name
-	state.NightLightActive = s.NightLightActive
-	state.PanelLockActive = s.PanelLockActive
-	state.PowerStatus = s.PowerStatus
-	state.SleepModeActive = s.SleepModeActive
-	state.UnitStatus = fToI(s.UnitStatus)
+	robot.CleanCycleWaitTimeMinutes = fToI(r.CleanCycleWaitTimeMinutes)
+	robot.CyclesAfterDrawerFull = fToI(r.CyclesAfterDrawerFull)
+	robot.CycleCapacity = fToI(r.CycleCapacity)
+	robot.CycleCount = fToI(r.CycleCount)
+	robot.CyclesUntilFull = fToI(r.CyclesUntilFull)
+	robot.DidNotifyOffline = r.DidNotifyOffline
+	robot.DFICycleCount = fToI(r.DFICycleCount)
+	robot.DFITriggered = r.DFITriggered
+	robot.LitterRobotID = r.LitterRobotID
+	robot.LitterRobotSerial = r.LitterRobotSerial
+	robot.Name = r.Name
+	robot.NightLightActive = r.NightLightActive
+	robot.PanelLockActive = r.PanelLockActive
+	robot.PowerStatus = r.PowerStatus
+	robot.SleepModeActive = r.SleepModeActive
+	robot.UnitStatus = fToI(r.UnitStatus)
 
-	return state
+	return robot
 
 }
 

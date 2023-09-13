@@ -3,9 +3,6 @@
 litterRobot:
   email: myemail  # email for the Litter Robot app
   password: mypassword  # password for the Litter Robot app
-  clientId: clientid  # OAuth client ID for the Litter Robot app
-  clientSecret: clientsecret  # OAuth client secret for the Litter Robot app
-  apiKey: apikey  # API key for Litter Robot app (universal)
 
 # InfluxDB Configuration
 influxDB:

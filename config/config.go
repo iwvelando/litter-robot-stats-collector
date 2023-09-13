@@ -5,15 +5,20 @@ package config
 import (
 	"fmt"
 	"github.com/spf13/viper"
-	litterapi "github.com/tlkamp/litter-api"
 	"time"
 )
 
 // Configuration holds all configuration for litter-robot-stats-collector
 type Configuration struct {
-	LitterRobot litterapi.Config
+	LitterRobot LitterRobot
 	InfluxDB    InfluxDB
 	Polling     Polling
+}
+
+// LitterRobot holds the connection parameters for the Litter API
+type LitterRobot struct {
+	Email    string
+	Password string
 }
 
 // InfluxDB holds the connection parameters for InfluxDB

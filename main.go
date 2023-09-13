@@ -1,12 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/iwvelando/litter-robot-stats-collector/config"
 	"github.com/iwvelando/litter-robot-stats-collector/influxdb"
 	log "github.com/sirupsen/logrus"
-	litterapi "github.com/tlkamp/litter-api"
+	lr "github.com/tlkamp/litter-api/v2/pkg/client"
 	"os"
 	"os/signal"
 	"syscall"
@@ -45,13 +46,15 @@ func main() {
 		}).Fatal("failed to parse configuration")
 	}
 
-	litterClient, err := litterapi.NewClient(&configuration.LitterRobot)
-	litterClientExpiry := time.Now().Add(litterClient.Expiry - 1*time.Minute)
+	api := lr.New(configuration.LitterRobot.Email, configuration.LitterRobot.Password)
+	ctx := context.Background()
+
+	err = api.Login(ctx)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"op":    "litter-api.NewClient",
+			"op":    "litter-api.Login",
 			"error": err,
-		}).Fatal("failed to authenticate to Litter Robot")
+		}).Fatal("failed to authenticate to Litter API")
 	}
 
 	influxClient, writeAPI, err := influxdb.Connect(configuration)
@@ -83,21 +86,17 @@ func main() {
 	go func() {
 		for {
 
-			if time.Now().After(litterClientExpiry) {
-				litterClient.RefreshToken()
-				litterClientExpiry = time.Now().Add(litterClient.Expiry - 1*time.Minute)
-			}
-
 			pollStartTime := time.Now()
-			states, err := litterClient.States()
 			queryTime := time.Now()
+
+			err = api.FetchRobots(ctx)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"op":    "litter-api.States",
+					"op":    "litter-api.FetchRobots",
 					"error": err,
-				}).Fatal("failed to query Litter Robot states")
+				}).Fatal("failed to fetch robots from Litter API")
 			} else {
-				influxdb.WriteAll(configuration, writeAPI, states, queryTime)
+				influxdb.WriteAll(configuration, writeAPI, api.Robots(), queryTime)
 			}
 
 			timeRemaining := configuration.Polling.Interval*time.Second - time.Since(pollStartTime)
